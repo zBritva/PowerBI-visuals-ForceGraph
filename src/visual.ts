@@ -244,8 +244,8 @@ export class ForceGraph implements IVisual {
                 this.fadeNode(d);
             }))
             .on("dragend", ((d: ForceGraphNode) => {
-                this.forceLayout.tick();
-                this.forceLayout.resume();
+                // this.forceLayout.tick();
+                // this.forceLayout.resume();
                 d.isDrag = false;
                 this.fadeNode(d);
             }))
@@ -255,7 +255,7 @@ export class ForceGraph implements IVisual {
                 d.x += (d3.event as any).dx;
                 d.y += (d3.event as any).dy;
                 this.fadeNode(d);
-                this.forceLayout.tick();
+                // this.forceLayout.tick();
             });
 
         const svg: d3.Selection<any> = root
@@ -592,13 +592,43 @@ export class ForceGraph implements IVisual {
         } else {
             this.forceLayout.theta(theta).start();
 
-            for (let i = 0; i < nodesNum; ++i) {
+            // for (let i = 0; i < nodesNum; ++i) {
+            //     this.forceLayout.tick();
+            // }
+
+            // this.forceLayout.stop();
+            this.setVisualData(this.container, this.colorPalette, this.colorHelper);
+            this.forceLayout.on("tick", this.getForceTick());
+            const maxWidth: number = this.viewport.width * ForceGraph.ResolutionFactor;
+            const maxHeight: number = this.viewport.height * ForceGraph.ResolutionFactor;
+            const viewPortWidthDownLimit: number = (this.viewport.width - maxWidth) / 2;
+            const viewPortHeightDownLimit: number = (this.viewport.height - maxHeight) / 2;
+            const viewPortWidthUpLimit: number = (this.viewport.height + maxHeight) / 2;
+
+            // wait until simulation is end
+            this.forceLayout.on("end", () => {
+                const limitX: (x: number) => number = x => Math.max(viewPortWidthDownLimit, Math.min(viewPortWidthUpLimit, x));
+                const limitY: (y: number) => number = y => Math.max(viewPortHeightDownLimit, Math.min(viewPortWidthUpLimit, y));
+                this.nodes.attr("transform", (node: ForceGraphNode) => {
+                    return translate((node.x), (node.y));
+                });
+                this.paths.attr("d", (link: ForceGraphLink) => {
+                    link.source.x = limitX(link.source.x);
+                    link.source.y = limitY(link.source.y);
+                    link.target.x = limitX(link.target.x);
+                    link.target.y = limitY(link.target.y);
+
+                    return this.settings.links.showArrow
+                        ? this.getPathWithArrow(link)
+                        : this.getPathWithoutArrow(link);
+                });
+            });
+
+            for (let i = 0; i < 200; ++i) {
                 this.forceLayout.tick();
             }
 
             this.forceLayout.stop();
-            this.setVisualData(this.container, this.colorPalette, this.colorHelper);
-            this.forceLayout.on("tick", this.getForceTick());
         }
     }
 
@@ -831,24 +861,23 @@ export class ForceGraph implements IVisual {
             maxHeight: number = viewport.height * resolutionFactor,
             viewPortWidthDownLimit: number = (viewport.width - maxWidth) / 2,
             viewPortHeightDownLimit: number = (viewport.height - maxHeight) / 2,
-            viewPortHeightUpLimit: number = (viewport.height + maxHeight) / 2,
             viewPortWidthUpLimit: number = (viewport.height + maxHeight) / 2,
             limitX: (x: number) => number = x => Math.max(viewPortWidthDownLimit, Math.min(viewPortWidthUpLimit, x)),
             limitY: (y: number) => number = y => Math.max(viewPortHeightDownLimit, Math.min(viewPortWidthUpLimit, y));
 
         return () => {
-            this.paths.attr("d", (link: ForceGraphLink) => {
-                link.source.x = limitX(link.source.x);
-                link.source.y = limitY(link.source.y);
-                link.target.x = limitX(link.target.x);
-                link.target.y = limitY(link.target.y);
+            // this.paths.attr("d", (link: ForceGraphLink) => {
+            //     link.source.x = limitX(link.source.x);
+            //     link.source.y = limitY(link.source.y);
+            //     link.target.x = limitX(link.target.x);
+            //     link.target.y = limitY(link.target.y);
 
-                return showArrow
-                    ? this.getPathWithArrow(link)
-                    : this.getPathWithoutArrow(link);
-            });
+            //     return showArrow
+            //         ? this.getPathWithArrow(link)
+            //         : this.getPathWithoutArrow(link);
+            // });
 
-            this.nodes.attr("transform", (node: ForceGraphNode) => translate(limitX(node.x), limitY(node.y)));
+            // this.nodes.attr("transform", (node: ForceGraphNode) => translate(limitX(node.x), limitY(node.y)));
 
             if (!this.settings.labels.allowIntersection
                 && this.settings.labels.show
